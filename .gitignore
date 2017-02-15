@@ -1,7 +1,10 @@
+*.csv
+
 # Configuration files
 *.config
 *.cfg
 config.*
+*.pem
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

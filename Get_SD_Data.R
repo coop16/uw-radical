@@ -1,8 +1,6 @@
 library(data.table)
 
 # get raw colocation data
-setwd('/pacific/rad')
-
 names<-list.files(path="data/rawdata", full.names = T)
 names_cal<-names[grep("calibration",names)]
 
