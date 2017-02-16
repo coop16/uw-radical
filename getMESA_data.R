@@ -107,8 +107,8 @@ getMESA_data <- function(nday=NA, start.date=NA, stop.date=NA) {
 
   if (!is.na(nday)){
     #yesterday midnight (multiply by 1000 to match python date representation
-    start.date<- as.numeric(trunc(Sys.time()-3600*24*nday,"days"))*1000
-    stop.date<-as.numeric(trunc(Sys.time(),"days")-1)*1000
+    start.date<- as.numeric(Sys.time()-3600*24*nday)*1000
+    stop.date<-as.numeric(Sys.time())*1000
   } else {
     start.date <- as.numeric(start.date)*1000
     stop.date <- as.numeric(stop.date)*1000
