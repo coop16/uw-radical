@@ -2,7 +2,7 @@ library(shiny)
 library(ggplot2)
 library(dplyr)
 
-setwd('H:/projects/uw-radical')
+setwd('~/Documents/Work/uw-radical')
 source('getMESA_data.R')
 
 shinyServer(function(input, output) {

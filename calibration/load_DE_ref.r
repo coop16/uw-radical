@@ -8,8 +8,8 @@ library(lubridate)
 
 load_DE <- function(){
   # Read in data
-  ref_files <- list.files(paste(shared.drive, '/Data/calibration/'), pattern = 'ref_analyzers_201702[0-9]+\\.csv$', full.names = T)
-  
+  ref_files <- list.files(paste(shared.drive, 'Data/calibration/', sep = '/'), pattern = 'ref_analyzers_201702[0-9]+\\.csv$', full.names = T)
+
   ref_data <- lapply(ref_files, function(x){
       read_csv(x, na = c('','NA','NaN')) %>%
           select(time = `Computer Time Stamp`,

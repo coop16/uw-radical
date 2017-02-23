@@ -97,3 +97,5 @@ ENV/
 .ropeproject
 .Rproj.user
 donottrack/*
+.Rdata
+.Rhistory

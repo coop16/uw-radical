@@ -1,25 +1,31 @@
 options(scipen = 999)
+setwd('H:/projects/uw-radical')
 
+
+### Get and load necessary packages ###
+list.of.packages <- c("stringr", "lubridate", "dplyr", "ggplot2", "readxl", "readr")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
 library(readxl)
 library(ggplot2)
 library(dplyr)
 library(readr)
 library(lubridate)
 
-setwd('H:/projects/uw-radical')
 
+### Load Data ###
 source('config.r')
 source('calibration/load_O3_ref.r')
 source('calibration/load_DE_ref.r')
 load(paste(shared.drive, 'Data/calibration/sensor_calibration_data_01Feb17_16Feb17.rdata', sep = '/'))
-#tz(mesa.data$wide$date) <- 'etc/UTC'
+
 
 ### Prepare sensor data ###
 average.sensor.measurements <- function(df, avg_period){
     df %>%
         mutate(time.bin = floor_date(date, unit = avg_period)) %>%
         select(-date) %>%
-        group_by(sensor, time.hourly) %>%
+        group_by(sensor, time.bin) %>%
         summarize_if(is.numeric, function(x){mean(x, na.rm=T)})
 }
 average.ref.measurements <- function(df, avg_period){
@@ -28,7 +34,7 @@ average.ref.measurements <- function(df, avg_period){
             time.bin = floor_date(time, unit = avg_period)
         ) %>%
         select(-time) %>%
-        group_by(time.hourly) %>%
+        group_by(time.bin) %>%
         summarize_if(is.numeric, function(x){mean(x, na.rm=T)})
 }
 
@@ -45,10 +51,6 @@ ref_o3_10min <- average.ref.measurements(ref_o3, '10 minutes')
 ref_o3_05min <- average.ref.measurements(ref_o3, '5 minutes')
 
 
-
-
-
-
 ### Compare stuff!!! ###
 compare <- sensor_data_10min  %>%
     ungroup() %>%
@@ -59,20 +61,28 @@ compare <- sensor_data_10min  %>%
 ref_col <- c(
     'CO_sensor'             = 'ref.co.1',
     'O3_sensor'             = 'ref.o3',
-    'NO_sensor'             = 'ref.no',
-    'NO2_sensor'            = 'ref.no2',
-    'pm.shinyei1'           = 'ref.neph',
-    'pm.shinyei2'           = 'ref.neph',
+    #'NO_sensor'             = 'ref.no',
+    #'NO2_sensor'            = 'ref.no2',
+    'S1_val'           = 'ref.neph',
+    'S2_val'           = 'ref.neph',
     'Plantower1_pm2_5_mass' = 'ref.neph',
     'Plantower2_pm2_5_mass' = 'ref.neph'
 )
 
 
+### Calculate comparison statistics ###
+sensor.calibrations <- list()
+for( col in names(ref_col) ){
+  if( sum(is.na(compare[,col])) & sum(is.na(compare[,ref_col[col]])) ){
+    sensor.calibrations[[col]] <- lm(paste(col, '~', ref_col[col]), data = compare)
+  }
+}
+
 
 ### Show timeline ###
 rec_times <- rbind(
-    mesa.data$wide %>% select(sensor, time = date),
-    ref_data %>% filter(!is.na(ref.no2)) %>% transmute(sensor = 'DE LAB', time),
+    mesa.data$wide %>% filter(!is.na(Plantower1_pm2_5_mass)) %>% select(sensor, time = date),
+    ref_data %>% transmute(sensor = 'DE LAB', time),
     ref_o3 %>% transmute(sensor = 'O3 LAB', time)
 )
 plt <- ggplot(rec_times) + geom_point(aes(y = sensor, x = time))
