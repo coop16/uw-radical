@@ -7,8 +7,8 @@ source('getMESA_data.R')
 
 shinyServer(function(input, output) {
 
-  dataset <- reactivePoll(5 * 60 * 1000, NULL,
-    checkFunc = function(){floor_date(Sys.time(), unit = '5 mins')}, # server updates every 5 minutes on the 5's.
+  dataset <- reactivePoll(30 * 1000, NULL, # check every 30 seconds whether it's time for an update
+    checkFunc = function(){floor_date(Sys.time() - 30, unit = '5 mins')}, # server updates every 5 minutes on the 5's -- we'll wait 30 extra seconds to allow for clock diffs
     valueFunc = function(){getMESA_data(start = Sys.time() - (8*60*60), stop = Sys.time())$long}
     )
 
