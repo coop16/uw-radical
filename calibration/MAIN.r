@@ -1,6 +1,7 @@
 ### SET OPTIONS HERE ###
-WK.DIR = 'H:/projects/uw-radical'
+WK.DIR = '//pacific/rad/Production_code'
 DATE.RANGE = c(as.POSIXct('2017-02-13 00:00 PST'), as.POSIXct('2017-02-13 23:59 PST'))
+MONITORS.OF.INTEREST = 1:99 # which monitors (MESA#) do you want?
 ########################
 
 
@@ -19,7 +20,7 @@ source('calibration/load_O3_ref.r', encoding = 'UTF8') # load files like rad/cal
 source('calibration/load_DE_ref.r', encoding = 'UTF8') # load raw files from folders like rad/calibration/MESA_NLk_Colocation_Data_[date]/
 source('getMESA_data_Kairos.r', encoding = 'UTF8') # get sensor data from Kairos
 suppressWarnings(suppressMessages(sensor_data <- getMESA_data(start.date = DATE.RANGE[1], stop.date = DATE.RANGE[2])))
-
+sensor_data <- sensor_data$wide %>% filter(sensor %in% paste0('MESA', MONITORS.OF.INTEREST))
 
 ### Prepare sensor data ###
 average.sensor.measurements <- function(df, avg_period){
@@ -38,9 +39,9 @@ average.ref.measurements <- function(df, avg_period){
         summarize_if(is.numeric, function(x){mean(x, na.rm=T)})
 }
 
-#sensor_data_30min <- average.sensor.measurements(sensor_data$wide, '30 minutes')
-sensor_data_10min <- average.sensor.measurements(sensor_data$wide, '10 minutes')
-#sensor_data_05min <- average.sensor.measurements(sensor_data$wide, '05 minutes')
+#sensor_data_30min <- average.sensor.measurements(sensor_data, '30 minutes')
+sensor_data_10min <- average.sensor.measurements(sensor_data, '10 minutes')
+#sensor_data_05min <- average.sensor.measurements(sensor_data, '05 minutes')
 #ref_data_30min <- average.ref.measurements(ref_data, '30 minutes')
 ref_data_10min <- average.ref.measurements(ref_data, '10 minutes')
 #ref_data_05min <- average.ref.measurements(ref_data, '05 minutes')
