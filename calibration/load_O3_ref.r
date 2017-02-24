@@ -1,9 +1,4 @@
-library(dplyr)
-library(readr)
-library(lubridate)
-library(stringr)
-
-### Load Ozone ###
+### Load Ozone Reference Data ###
 load_ozone <- function(){
     ref_files <- list.files(paste(shared.drive, 'Data/calibration', sep = '/'), pattern = 'Integrated_Monitors_Ozone', full.names = T)
     ref_data <- lapply(ref_files, function(x){

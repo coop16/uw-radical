@@ -52,3 +52,7 @@ factory_gas_calibrations <- function(df){
     df <- df[,!(names(df) %in% names(calvals))] # drop calibration values
     df
 }
+
+getMESA_data <- function(){
+    datafeed_download_all() %>% factory_gas_calibrations()
+}

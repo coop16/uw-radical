@@ -16,7 +16,6 @@
 # Modified lpiep 2/23/17
 ###########################################
 
-setwd("H:/projects/uw-radical")
 source('config.r') #load api configuration
 
 #check if necessary packages are installed
