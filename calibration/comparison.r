@@ -3,20 +3,16 @@ setwd('H:/projects/uw-radical')
 
 
 ### Get and load necessary packages ###
-list.of.packages <- c("stringr", "lubridate", "dplyr", "ggplot2", "readxl", "readr")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+list.of.packages <- c('stringr', 'lubridate', 'dplyr', 'ggplot2', 'stringr')
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,'Package'])]
 if(length(new.packages)) install.packages(new.packages)
-library(readxl)
-library(ggplot2)
-library(dplyr)
-library(readr)
-library(lubridate)
+sapply(list.of.packages, library, character.only = T) -> .shh
 
 
 ### Load Data ###
-source('config.r')
-source('calibration/load_O3_ref.r')
-source('calibration/load_DE_ref.r')
+source('config.r', encoding = 'UTF8')
+source('calibration/load_O3_ref.r', encoding = 'UTF8')
+source('calibration/load_DE_ref.r', encoding = 'UTF8')
 load(paste(shared.drive, 'Data/calibration/sensor_calibration_data_01Feb17_16Feb17.rdata', sep = '/'))
 
 
@@ -40,29 +36,26 @@ average.ref.measurements <- function(df, avg_period){
 
 sensor_data_30min <- average.sensor.measurements(mesa.data$wide, '30 minutes')
 sensor_data_10min <- average.sensor.measurements(mesa.data$wide, '10 minutes')
-sensor_data_05min <- average.sensor.measurements(mesa.data$wide, '5 minutes')
 
 ref_data_30min <- average.ref.measurements(ref_data, '30 minutes')
 ref_data_10min <- average.ref.measurements(ref_data, '10 minutes')
-ref_data_05min <- average.ref.measurements(ref_data, '5 minutes')
 
 ref_o3_30min <- average.ref.measurements(ref_o3, '30 minutes')
 ref_o3_10min <- average.ref.measurements(ref_o3, '10 minutes')
-ref_o3_05min <- average.ref.measurements(ref_o3, '5 minutes')
 
 
 ### Compare stuff!!! ###
-compare <- sensor_data_10min  %>%
+compare <- sensor_data_30min  %>%
     ungroup() %>%
-    inner_join(ref_data_10min, by = 'time.bin', suffix = c('.sensor', '.ref')) %>%
+    inner_join(ref_data_30min, by = 'time.bin', suffix = c('.sensor', '.ref')) %>%
     arrange(time.bin) %>%
     mutate(sensor = factor(sensor))
 
 ref_col <- c(
     'CO_sensor'             = 'ref.co.1',
-    'O3_sensor'             = 'ref.o3',
-    #'NO_sensor'             = 'ref.no',
-    #'NO2_sensor'            = 'ref.no2',
+    #'O3_sensor'             = 'ref.o3',
+    'NO_sensor'             = 'ref.no',
+    'NO2_sensor'            = 'ref.no2',
     'S1_val'           = 'ref.neph',
     'S2_val'           = 'ref.neph',
     'Plantower1_pm2_5_mass' = 'ref.neph',
@@ -74,7 +67,7 @@ ref_col <- c(
 sensor.calibrations <- list()
 for( col in names(ref_col) ){
   if( sum(is.na(compare[,col])) & sum(is.na(compare[,ref_col[col]])) ){
-    sensor.calibrations[[col]] <- lm(paste(col, '~', ref_col[col]), data = compare)
+    sensor.calibrations[[col]] <- lm(paste(col, '~', ref_col[col], '+ sensor'), data = compare)
   }
 }
 
@@ -90,11 +83,10 @@ plt <- ggplot(rec_times) + geom_point(aes(y = sensor, x = time))
 
 ### make scatterplot ###
 make.scatterplot <- function(compare, col, ref_col){
-    r2 <- format(round(cor(compare[ref_col], compare[col], use = 'pairwise')**2, 2) , nsmall=2)
     plt <- ggplot(compare) +
         geom_point(aes_string(x = ref_col, y = col, color = 'sensor')) +
-        geom_smooth(aes_string(x = ref_col, y = col), method = 'lm', se = F) +
-        ggtitle(paste(col,'(10 min avgs)\nr2=',r2)) +
+        geom_smooth(aes_string(x = ref_col, y = col, color = 'sensor'), method = 'lm', se = F) +
+        ggtitle(paste(col,'(30 min avgs)')) +
         theme_minimal() +
         scale_color_discrete(drop = F)
     return(plt)

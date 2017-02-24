@@ -1,37 +1,67 @@
-library(readxl)
-library(ggplot2)
-library(dplyr)
-library(readr)
-library(lubridate)
-
 ### Prepare Reference Data ###
+load.de <- function(de.dir){
+    # find relevant files
+    de.files <- list.files(de.dir, full.names = T)
+    main.file <- str_subset(de.files, 'Mobile_DAS.*\\.txt$')[1]
+    caps.file <- str_subset(de.files, 'CAPS-NO2.*\\.dat$')[1]
+    langan.files <- str_subset(de.files, 'LanganCO.*\\.csv')
 
-load_DE <- function(){
-  # Read in data
-  ref_files <- list.files(paste(shared.drive, 'Data/calibration/', sep = '/'), pattern = 'ref_analyzers_201702[0-9]+\\.csv$', full.names = T)
+    read.de.main <- function(main.file){
+        main.data <- read.table(main.file, header = T, sep = '\t', check.names = F, na.strings = c('NA', 'NaN', ''), stringsAsFactors = F) %>%
+            transmute(
+                time = mdy_hms(`Computer Time Stamp`, tz = 'America/Los_Angeles'),
+                ref.no = `2BTech NO, NO conc. (ppb)`,
+                ref.temp = `Precon HS-2000 Temp (°C)`,
+                ref.rh = `Precon HS-2000 RH (%)`,
+                ref.co2 = `SenseAir CO2 conc. (ppm)`,
+                ref.particle.ct = `P-Trak particle count`,
+                ref.neph = if_else(`Nephelometer scat. coeff. 2E-4 range` < .95*2.101e-04, `Nephelometer scat. coeff. 2E-4 range`, `Nephelometer scat. coeff. 1E-3 range`), #take high-range channel if more sensitive channel exceeds 95% of max
+                ref.o3 = `Optec O3 conc. (mg/m³)` * 24.45/48 #convert to ppb
+                )
+    }
 
-  ref_data <- lapply(ref_files, function(x){
-      read_csv(x, na = c('','NA','NaN')) %>%
-          select(time = `Computer Time Stamp`,
-                 ref.no = `2BTech NO, NO conc. (ppb)`,
-                 ref.no2 = `CAPS 10-s avg NO2 (ppb)`,
-                 ref.bc = `AE51 BC (ng/m3)`,
-                 ref.co.1 = `Lngn1 unaj mnfld CO, ppm`,
-                 ref.co.2 = `Lngn2 exp rm unadj CO, ppm`,
-                 ref.co2 = `SenseAir CO2 conc. (ppm)`,
-                 ref.o3 = `Optec O3 conc. (mg/m3)`,
-                 ref.particle.ct = `P-Trak prtcl count (pt/cm3)`,
-                 #ref.neph = `Neph intDL b-scat (m^-1)`
-                 ref.neph = `Nephelometer scat. coeff. 1E-3 range`
-          )
-  })
-  ref_data <- do.call(rbind, ref_data)
-  ref_data <- ref_data %>% mutate(
-      time = mdy_hm(time, tz = 'America/Los_Angeles'),
-      ref.no = as.numeric(ref.no),
-      ref.no2 = as.numeric(ref.no2),
-      ref.o3 = ref.o3 * 24.45/48 #convert to ppb
-  )
-  }
+    read.de.caps <- function(caps.file){
+        caps.data <- read.table(caps.file, header = T, sep = ',', check.names = F, na.strings = c('NA', 'NaN', ''), stringsAsFactors = F, comment.char = '%') %>%
+            transmute(
+                time = ymd_hms(Timestamp, tz = 'America/Los_Angeles'),
+                ref.no2 = NO2
+                )
+    }
 
-ref_data <- load_DE()
+    read.de.langan <- function(langan.file){
+        langan.data <- read.table(langan.file, header = T, sep = ',', check.names = F, na.strings = c('NA', 'NaN', ''), stringsAsFactors = F, skip = 1) %>%
+            mutate(time = mdy_hms(lag(`Date Time, GMT-08:00`), tz = 'America/Los_Angeles')) %>% #co timestamps are end of sample time and should be lagged
+            filter(!is.na(time)) %>% #toss the first 30 sec because of lag
+            select(
+                time,
+                ref.co = matches('CO# [0-9]+')
+                ) %>%
+            mutate(ref.co = ref.co - 1) #adjust for offset
+    }
+
+
+    # Load correct files
+    de.main.raw <- read.de.main(main.file)
+    de.caps.raw <- read.de.caps(caps.file)
+    de.langan.raw <- lapply(langan.files, read.de.langan)
+
+
+    # Bin each time period by 5 minute intervals, average, and join
+    time.avg <- function(df, unit = '5 minutes'){
+        df %>%
+            mutate(time = floor_date(time, unit = '5 minutes')) %>%
+            group_by(time) %>%
+            summarize_if(is.numeric, function(x){mean(x, na.rm=T)})
+        }
+
+    de.data <- time.avg(de.main.raw) %>%
+        full_join(time.avg(de.caps.raw), by = 'time') %>%
+        full_join(time.avg(de.langan.raw[[1]]), by = 'time') %>%
+        full_join(time.avg(de.langan.raw[[2]]), by = 'time', suffix = c('.1', '.2'))
+
+}
+
+de.dirs <- str_subset(list.dirs(paste(shared.drive, '/Data/calibration', sep = '/')), 'Colocation_Data_[0-9]+')
+ref_data <- list()
+for(de.dir in de.dirs) ref_data[[de.dir]] <- load.de(de.dir)
+ref_data <- do.call(rbind, ref_data)

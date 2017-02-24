@@ -9,8 +9,8 @@ load_ozone <- function(){
     ref_data <- lapply(ref_files, function(x){
         read.table(x, na.strings = c('','NA','NaN'), skip = 2, header = F, sep = ',', col.names = c('obs_num', 'time', 'voltage', '', '', '')) %>%
         transmute(
-            time = with_tz(mdy_hms(time, tz = 'America/Los_Angeles'), 'America/Los_Angeles'),
-            ref.o3 = voltage/2
+            time = mdy_hms(time, tz = 'America/Los_Angeles'),
+            ref.o3 = 1000*voltage/2
             )
     })
     ref_data <- do.call(rbind, ref_data)
