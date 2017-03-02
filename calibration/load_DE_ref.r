@@ -2,7 +2,7 @@
 load.de <- function(de.dir){
     # find relevant files
     de.files <- list.files(de.dir, full.names = T)
-    main.file <- str_subset(de.files, 'Mobile_DAS.*\\.txt$')[1]
+    main.file <- str_subset(de.files, 'Mobile_DAS\\.txt$')[1]
     caps.file <- str_subset(de.files, 'CAPS-NO2.*\\.dat$')[1]
     langan.files <- str_subset(de.files, 'LanganCO.*\\.csv')
 
