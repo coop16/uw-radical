@@ -22,10 +22,10 @@ RUN R -e "install.packages(c('leaflet', 'RColorBrewer', 'scales', 'lattice', 'dp
 
 # copy the app to the image
 RUN mkdir /root/uw-radical
-COPY superzip /root/uw-radical
+COPY uw-radical /root/uw-radical
 
 COPY Rprofile.site /usr/lib/R/etc/
 
 EXPOSE 3838
 
-CMD ["R", "-e shiny::runApp('/root/uw-radical')"]
+CMD ["R", "-e shiny::runApp('/root/uw-radical/dashboard')"]
