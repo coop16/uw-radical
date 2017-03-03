@@ -3,15 +3,18 @@ library(ggplot2)
 library(dplyr)
 
 setwd('H:/projects/uw-radical')
-source('getMESA_data_Kairos.R')
+source('getMESA_data.R')
 
 shinyServer(function(input, output) {
   site_lookup = list(
+      'ALL' = str_extract(datafeed_get_files(), '.*(?=\\.csv)'),
       'NYC' = c('MESA9', 'MESA10', 'MESA11', 'MESA13', 'MESA14', 'MESA16')
       )
   dataset <- reactivePoll(30 * 1000, NULL, # check every 30 seconds whether it's time for an update
     checkFunc = function(){floor_date(Sys.time() - 30, unit = '5 mins')}, # server updates every 5 minutes on the 5's -- we'll wait 30 extra seconds to allow for clock diffs
-    valueFunc = function(){getMESA_data(start = Sys.time() - (24*60*60), stop = Sys.time())$long %>% filter(monitor %in% site_lookup[[input$site]])}
+    valueFunc = function(){
+        datafeed_download_file(paste0(site_lookup[[input$site]], '.csv')) %>% gather(tags, value, -monitor, -date, na.rm = T) %>% filter(date > Sys.time() - 72*60*60)
+        }
     )
 
   # Timeseries plot
@@ -22,17 +25,17 @@ shinyServer(function(input, output) {
       ) +
       geom_line(aes_string(x='date', y='as.numeric(value)', color = 'tags')) +
       geom_point(aes_string(x='date', y='as.numeric(value)', color = 'tags')) +
-      facet_grid(monitor~.) +
+      facet_wrap(~monitor, ncol = 1) +
       theme_minimal() +
       xlab('time') +
       ylab('val') +
-      xlim(Sys.time() - (input$starttime*60*60), Sys.time() - (input$stoptime*60*60)) +
+      coord_cartesian(xlim = c(Sys.time() - (input$starttime*60*60), Sys.time() - (input$stoptime*60*60))) +
       ggtitle(paste(input$channel, 'as of', as.character(max(dataset()$date)))) +
-      theme(legend.position="bottom")
+      theme(legend.position="top", strip.text = element_text(size=14, face="bold"))
 
 
     print(ts.plt)
-  }, height = 1000)
+  }, height = 1500)
   # output$tlplot <- renderPlot({
   #   # Traffic Light plot
   #

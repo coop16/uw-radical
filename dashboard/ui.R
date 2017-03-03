@@ -13,7 +13,7 @@ shinyUI(pageWithSidebar(
       ),
     sliderInput('starttime',
       'Start time (hours ago)',
-      min = 1, max = 24, value = 24, step = 6
+      min = 0, max = 72, value = 24, step = 6
       ),
     sliderInput('stoptime',
       'Stop time (hours ago)',
@@ -21,7 +21,7 @@ shinyUI(pageWithSidebar(
       ),
     selectInput('site',
         'Site',
-        c('NYC'),
+        c('NYC', 'ALL'),
         selected = 'NYC'
         )
       #,plotOutput('tlplot')
