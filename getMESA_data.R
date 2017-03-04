@@ -3,7 +3,7 @@ library(dplyr)
 library(stringr)
 
 datafeed_get_files <- function(){
-    source('config.r')
+    source('config.R')
     http.response <- GET(datafeed.url, authenticate(datafeed.usr, datafeed.pwd))
     if( http.response$status_code == 200 ){
         content(http.response, 'text', encoding = 'UTF-8') %>% str_extract_all('(?<=a href=\\")MESA[0-9]+\\.csv') %>% unlist()
@@ -16,7 +16,7 @@ datafeed_download_file <- function(fnames, quiet = F){
     if(length(fnames) > 1){
         lapply(fnames, function(x){datafeed_download_file(x, quiet = quiet)}) %>% bind_rows() %>% factory_gas_calibrations()
     }else{
-        source('config.r')
+        source('config.R')
         http.response <- GET(paste(datafeed.url, fnames, sep = '/'), authenticate(datafeed.usr, datafeed.pwd))
         if( http.response$status_code == 200 ){
             if( !quiet ){ message(fnames) }

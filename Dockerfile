@@ -18,11 +18,11 @@ RUN apt-get update && apt-get install -y \
 RUN R -e "install.packages(c('shiny', 'rmarkdown'), repos='https://cloud.r-project.org/')"
 
 # install dependencies of the dashboard
-RUN R -e "install.packages(c('leaflet', 'RColorBrewer', 'scales', 'lattice', 'dplyr', 'DT'), repos='https://cloud.r-project.org/')"
+RUN R -e "install.packages(c('ggplot2', 'dplyr', 'lubridate', 'tidyr', 'httr', 'stringr'), repos='https://cloud.r-project.org/')"
 
 # copy the app to the image
 RUN mkdir /root/uw-radical
-COPY uw-radical /root/uw-radical
+COPY . /root/uw-radical
 
 COPY Rprofile.site /usr/lib/R/etc/
 
