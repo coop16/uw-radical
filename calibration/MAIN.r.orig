@@ -1,0 +1,135 @@
+### SET OPTIONS HERE ###
+<<<<<<< HEAD
+WK.DIR = '//pacific/rad/Production_code'
+DATE.RANGE = c(as.POSIXct('2017-03-06 00:00 PST'), as.POSIXct('2017-03-7 23:59 PST'))
+MONITORS.OF.INTEREST = 1:99 # which monitors (MESA#) do you want?
+=======
+WK.DIR = 'H:/projects/uw-radical'
+DATE.RANGE = c(as.POSIXct('2017-02-27 00:00 PST'), as.POSIXct('2017-03-01 23:59 PST'))
+MONITORS.OF.INTEREST = 9:99 # which monitors (MESA#) do you want?
+>>>>>>> fdeddacadffa40398ed21a02015b141496a5dea4
+########################
+
+
+### Get set up and load necessary packages ###
+options(scipen = 999)
+setwd(WK.DIR)
+list.of.packages <- c('stringr', 'lubridate', 'dplyr', 'reshape2')
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,'Package'])]
+if(length(new.packages)) install.packages(new.packages)
+suppressWarnings(suppressMessages(sapply(list.of.packages, library, character.only = T) -> .shh))
+
+
+### Load Data ###
+source('config.r', encoding = 'UTF8')
+source('calibration/load_schedule.r', encoding = 'UTF8') # load files like rad/calibration/*Integrated_Monitors_Ozone*
+source('calibration/load_O3_ref.r', encoding = 'UTF8') # load files like rad/calibration/*Integrated_Monitors_Ozone*
+source('calibration/load_DE_ref.r', encoding = 'UTF8') # load raw files from folders like rad/calibration/MESA_NLk_Colocation_Data_[date]/
+source('getMESA_data_Kairos.r', encoding = 'UTF8') # get sensor data from Kairos
+suppressWarnings(suppressMessages(sensor_data <- getMESA_data(start.date = DATE.RANGE[1], stop.date = DATE.RANGE[2])))
+sensor_data <- sensor_data$wide %>% filter(sensor %in% paste0('MESA', MONITORS.OF.INTEREST))
+
+### Prepare sensor data ###
+average.sensor.measurements <- function(df, avg_period){
+    df %>%
+        mutate(time.bin = floor_date(date, unit = avg_period)) %>%
+        select(-date) %>%
+        group_by(sensor, time.bin) %>%
+        summarize_if(is.numeric, function(x){mean(x, na.rm=T)}) %>%
+        ungroup()
+}
+average.ref.measurements <- function(df, avg_period){
+    df %>%
+        mutate(time.bin = floor_date(time, unit = avg_period)) %>%
+        select(-time) %>%
+        group_by(time.bin) %>%
+        summarize_if(is.numeric, function(x){mean(x, na.rm=T)})
+}
+
+#sensor_data_30min <- average.sensor.measurements(sensor_data, '30 minutes')
+sensor_data_10min <- average.sensor.measurements(sensor_data, '10 minutes')
+#sensor_data_05min <- average.sensor.measurements(sensor_data, '05 minutes')
+#ref_data_30min <- average.ref.measurements(ref_data, '30 minutes')
+ref_data_10min <- average.ref.measurements(ref_data, '10 minutes')
+#ref_data_05min <- average.ref.measurements(ref_data, '05 minutes')
+#ref_o3_30min <- average.ref.measurements(ref_o3, '30 minutes')
+ref_o3_10min <- average.ref.measurements(ref_o3, '10 minutes')
+#ref_o3_05min <- average.ref.measurements(ref_o3, '05 minutes')
+
+
+### Compare stuff!!! ###
+sensor_schedule <- sensor_data_10min  %>% inner_join(schedule_data, by = 'sensor')
+de_exposures <- sensor_schedule %>% left_join(ref_data_10min, by = 'time.bin') %>% filter(time.bin >= exposure_start & time.bin <= exposure_end & location == 'Diesel Chamber') %>% arrange(sensor, time.bin)
+o3_exposures <- sensor_schedule %>% left_join(ref_o3_10min,   by = 'time.bin') %>% filter(time.bin >= exposure_start & time.bin <= exposure_end & location == 'Ozone Chamber') %>% arrange(sensor, time.bin)
+compare <- full_join(de_exposures, o3_exposures) %>%
+    mutate(sensor = factor(sensor)) %>%
+    select(time.bin, sensor, CO_sensor, O3_sensor, NO_sensor, NO2_sensor, S1_val, S2_val, matches('Plantower'), matches('ref\\.'))
+
+ref_col <- c(
+    'CO_sensor'             = 'ref.co',
+    'O3_sensor'             = 'ref.o3',
+    'NO_sensor'             = 'ref.no',
+    'NO2_sensor'            = 'ref.no2',
+    'S1_val'                = 'ref.neph',
+    'S2_val'                = 'ref.neph',
+    'Plantower1_pm2_5_mass' = 'ref.neph',
+    'Plantower2_pm2_5_mass' = 'ref.neph'
+)
+
+
+### Calculate comparison statistics ###
+sensor.calibrations <- list()
+for( col in names(ref_col) ){ # make a lm for each sensor & pollutant
+    sensor.calibrations[[col]] <- list()
+    for( sensor in unique(compare$sensor) ){
+        if( sum(!is.na(compare[which(compare$sensor == sensor), col]) & !is.na(compare[which(compare$sensor == sensor), ref_col[col]])) ){ # are there any measures to compare?
+            sensor.calibrations[[col]][[sensor]] <- lm(paste(ref_col[col], '~', col), data = compare[which(compare$sensor == sensor),])
+        }
+    }
+}
+sensor.calibrations <- unlist(sensor.calibrations, recursive = F)
+
+results <- data.frame(
+    sensor    = names(sensor.calibrations) %>% str_extract('MESA[0-9]+$'),
+    poll      = names(sensor.calibrations) %>% str_extract('^.*(?=\\.)'),
+    r2        = unlist(lapply(sensor.calibrations, function(fit){summary(fit)$r.squared})),
+    ct        = unlist(lapply(sensor.calibrations, function(fit){length(fitted.values(fit))})),
+    pct_error = unlist(lapply(sensor.calibrations, function(fit){mean(resid(fit)/fitted.values(fit))})),
+    intercept = unlist(lapply(sensor.calibrations, function(fit){coef(fit)[1]})),
+    slope     = unlist(lapply(sensor.calibrations, function(fit){coef(fit)[2]}))
+) %>%
+    group_by(poll) %>%
+    mutate(
+        r2.low = (r2 - median(r2)) < -2*sd(r2),
+        intercept.outlier = abs(intercept - median(intercept)) > 2*sd(intercept)
+        ) %>%
+    ungroup()
+
+arrange(sensor, poll)
+write.csv(results, paste0(shared.drive, 'Documentation/calibration/calibration_results', as.character(Sys.Date()), '.csv'), row.names =F)
+
+
+### Make scatterplots ###
+make.scatterplot <- function(compare, col, ref_col){
+    plt <- ggplot(compare) +
+        geom_point(aes_string(x = ref_col, y = col, color = 'sensor')) +
+        geom_smooth(aes_string(x = ref_col, y = col, color = 'sensor'), method = 'lm', se = F) +
+        ggtitle(paste(col,'(10 min avgs)')) +
+        theme_minimal() +
+        scale_color_discrete(drop = F)
+    return(plt)
+}
+plts <- list()
+for( col in names(sensor_data_10min) ){
+    if (!(col %in% c('sensor', 'time'))){
+        if(col %in% names(ref_col)){
+            plts[[col]] <- make.scatterplot(compare, col, ref_col[col])
+        }
+    }
+}
+
+suppressWarnings(
+    for(col in names(plts)){ ggsave(paste0(shared.drive, 'Documentation/calibration/calibration_scatters', as.character(Sys.Date()),'_', col,'.png'), plts[[col]], width = 5, height = 5) }
+)
+
+print(paste0('Done! View results in ', shared.drive, 'Documentation/calibration/'))
