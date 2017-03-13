@@ -1,8 +1,10 @@
 library(shiny)
 library(ggplot2)
 library(dplyr)
+library(tidyr)
+library(lubridate)
 
-setwd('H:/projects/uw-radical')
+setwd('..')
 source('getMESA_data.R')
 
 shinyServer(function(input, output) {
@@ -18,7 +20,6 @@ shinyServer(function(input, output) {
     )
 
   # Timeseries plot
-
   output$tsplot <- renderPlot({
     ts.plt <- ggplot(
         dataset()[which(dataset()$tags %in% input$channel),]
