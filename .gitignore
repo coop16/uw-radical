@@ -1,5 +1,3 @@
-*.csv
-
 # Configuration files
 *.config
 *.cfg

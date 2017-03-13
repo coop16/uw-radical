@@ -194,7 +194,7 @@ getMESA_data <- function(nday=NA, start.date=NA, stop.date=NA) {
   long_parsed <- melt(wide_parsed, id.vars= c("date","monitor"), variable.name="tags")
 
   #order monitors as factors
-  wide_parsed$monitor<-factor(wide_parsed$monitor, levels=paste0("SY",1:14))
+  #wide_parsed$monitor<-factor(wide_parsed$monitor, levels=paste0("SY",1:14))
 
   #format date
   wide_parsed[,date:=as.POSIXct(date, tz="America/Los_Angeles")]

@@ -3,7 +3,7 @@ library(dplyr)
 library(stringr)
 
 datafeed_get_files <- function(){
-    source('config.r')
+    source('config.R')
     http.response <- GET(datafeed.url, authenticate(datafeed.usr, datafeed.pwd))
     if( http.response$status_code == 200 ){
         content(http.response, 'text', encoding = 'UTF-8') %>% str_extract_all('(?<=a href=\\")MESA[0-9]+\\.csv') %>% unlist()
@@ -12,20 +12,28 @@ datafeed_get_files <- function(){
     }
 }
 
-datafeed_download_file <- function(fname, quiet = F){
-    source('config.r')
-    http.response <- GET(paste(datafeed.url, fname, sep = '/'), authenticate(datafeed.usr, datafeed.pwd))
-    if( http.response$status_code == 200 ){
-        if( !quiet ){ message(fname) }
-        read.csv(text=content(http.response, 'text', encoding = 'UTF-8'))
+datafeed_download_file <- function(fnames, quiet = F){
+    if(length(fnames) > 1){
+        lapply(fnames, function(x){datafeed_download_file(x, quiet = quiet)}) %>% bind_rows() %>% factory_gas_calibrations()
     }else{
-        stop(paste0('DOWNLOAD FAILED: ', fname))
+        source('config.R')
+        http.response <- GET(paste(datafeed.url, fnames, sep = '/'), authenticate(datafeed.usr, datafeed.pwd))
+        if( http.response$status_code == 200 ){
+            if( !quiet ){ message(fnames) }
+            read.csv(text=content(http.response, 'text', encoding = 'UTF-8')) %>%
+            mutate(
+                date = as.POSIXct(date, format="%Y-%m-%d %H:%M:%S",tz="America/Los_Angeles")
+            ) %>%
+            factory_gas_calibrations()
+        }else{
+            stop(paste0('DOWNLOAD FAILED: ', fnames))
+        }
     }
 }
 
 datafeed_download_all <- function(quiet = F){
     datafeed.files <- datafeed_get_files() # Find files to download
-    sapply(datafeed.files, function(x){datafeed_download_file(x, quiet = quiet)}) %>% bind_rows() # Download each csv and combine
+    lapply(datafeed.files, function(x){datafeed_download_file(x, quiet = quiet)}) %>% bind_rows() %>% factory_gas_calibrations()# Download each csv and combine
 }
 
 factory_gas_calibrations <- function(df){
@@ -54,5 +62,5 @@ factory_gas_calibrations <- function(df){
 }
 
 getMESA_data <- function(){
-    datafeed_download_all() %>% factory_gas_calibrations()
+    datafeed_download_all()
 }
