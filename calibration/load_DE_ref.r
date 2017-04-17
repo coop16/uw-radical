@@ -30,7 +30,8 @@ load.de <- function(de.dir){
 
     read.de.langan <- function(langan.file){
         langan.data <- read.table(langan.file, header = T, sep = ',', check.names = F, na.strings = c('NA', 'NaN', ''), stringsAsFactors = F, skip = 1) %>%
-            mutate(time = mdy_hms(lag(`Date Time, GMT-08:00`), tz = 'America/Los_Angeles')) %>% #co timestamps are end of sample time and should be lagged
+            select(time = matches('Date Time'), everything()) %>%
+            mutate(time = mdy_hms(lag(time), tz = 'America/Los_Angeles')) %>% #co timestamps are end of sample time and should be lagged
             filter(!is.na(time)) %>% #toss the first 30 sec because of lag
             select(
                 time,

@@ -1,6 +1,6 @@
 ### SET OPTIONS HERE ###
-WK.DIR = '//pacific/rad/Production_code'
-DATE.RANGE = c(as.POSIXct('2017-03-06 00:00 PST'), as.POSIXct('2017-03-7 23:59 PST'))
+WK.DIR = 'H:/projects/uw-radical'
+DATE.RANGE = c(as.POSIXct('2017-01-27 00:00 PST'), as.POSIXct('2017-03-23 23:59 PST'))
 MONITORS.OF.INTEREST = 1:99 # which monitors (MESA#) do you want?
 ########################
 
@@ -16,9 +16,10 @@ suppressWarnings(suppressMessages(sapply(list.of.packages, library, character.on
 
 ### Load Data ###
 source('config.r', encoding = 'UTF8')
-source('calibration/load_O3_ref.r', encoding = 'UTF8') # load files like rad/calibration/*Integrated_Monitors_Ozone*
-source('calibration/load_DE_ref.r', encoding = 'UTF8') # load raw files from folders like rad/calibration/MESA_NLk_Colocation_Data_[date]/
-source('getMESA_data_Kairos.r', encoding = 'UTF8') # get sensor data from Kairos
+print('loading schedule');source('calibration/load_schedule.r', encoding = 'UTF8') # load files like rad/calibration/*Integrated_Monitors_Ozone*
+print('loading ozone');source('calibration/load_O3_ref.r', encoding = 'UTF8') # load files like rad/calibration/*Integrated_Monitors_Ozone*
+print('loading de');source('calibration/load_DE_ref.r', encoding = 'UTF8') # load raw files from folders like rad/calibration/MESA_NLk_Colocation_Data_[date]/
+print('loading kairos');source('getMESA_data_Kairos.r', encoding = 'UTF8') # get sensor data from Kairos
 suppressWarnings(suppressMessages(sensor_data <- getMESA_data(start.date = DATE.RANGE[1], stop.date = DATE.RANGE[2])))
 sensor_data <- sensor_data$wide %>% filter(sensor %in% paste0('MESA', MONITORS.OF.INTEREST))
 
@@ -51,10 +52,11 @@ ref_o3_10min <- average.ref.measurements(ref_o3, '10 minutes')
 
 
 ### Compare stuff!!! ###
-compare <- sensor_data_10min  %>%
-    left_join(ref_data_10min, by = 'time.bin') %>%
-    left_join(ref_o3_10min, by = 'time.bin') %>%
-    arrange(time.bin) %>%
+sensor_schedule <- sensor_data_10min  %>% inner_join(schedule_data, by = 'sensor')
+# filter down to colocation periods, dropping first 10 minutes of colocation
+de_exposures <- sensor_schedule %>% left_join(ref_data_10min, by = 'time.bin') %>% filter(time.bin >= (exposure_start + (10*60)) & time.bin <= exposure_end & location == 'Diesel Chamber') %>% arrange(sensor, time.bin)
+o3_exposures <- sensor_schedule %>% left_join(ref_o3_10min,   by = 'time.bin') %>% filter(time.bin >= (exposure_start + (10*60)) & time.bin <= exposure_end & location == 'Ozone Chamber') %>% arrange(sensor, time.bin)
+compare <- full_join(de_exposures, o3_exposures) %>%
     mutate(sensor = factor(sensor)) %>%
     select(time.bin, sensor, CO_sensor, O3_sensor, NO_sensor, NO2_sensor, S1_val, S2_val, matches('Plantower'), matches('ref\\.'))
 
@@ -83,16 +85,24 @@ for( col in names(ref_col) ){ # make a lm for each sensor & pollutant
 sensor.calibrations <- unlist(sensor.calibrations, recursive = F)
 
 results <- data.frame(
-    sensor    = names(sensor.calibrations) %>% str_extract('MESA[0-9]+$'),
-    poll      = names(sensor.calibrations) %>% str_extract('^.*(?=\\.)'),
-    r2        = unlist(lapply(sensor.calibrations, function(fit){summary(fit)$r.squared})),
-    ct        = unlist(lapply(sensor.calibrations, function(fit){length(fitted.values(fit))})),
-    pct_error = unlist(lapply(sensor.calibrations, function(fit){mean(resid(fit)/fitted.values(fit))})),
-    intercept = unlist(lapply(sensor.calibrations, function(fit){coef(fit)[1]})),
-    slope     = unlist(lapply(sensor.calibrations, function(fit){coef(fit)[2]}))
-) %>% arrange(sensor, poll)
-write.csv(results, paste0(shared.drive, 'Documentation/calibration/calibration_results', as.character(Sys.Date()), '.csv'), row.names =F)
+        sensor    = names(sensor.calibrations) %>% str_extract('MESA[0-9]+$'),
+        poll      = names(sensor.calibrations) %>% str_extract('^.*(?=\\.)'),
+        r2        = unlist(lapply(sensor.calibrations, function(fit){summary(fit)$r.squared})),
+        ct        = unlist(lapply(sensor.calibrations, function(fit){length(fitted.values(fit))})),
+        pct_error = unlist(lapply(sensor.calibrations, function(fit){mean(resid(fit)/fitted.values(fit))})),
+        intercept = unlist(lapply(sensor.calibrations, function(fit){coef(fit)[1]})),
+        slope     = unlist(lapply(sensor.calibrations, function(fit){coef(fit)[2]}))
+    ) %>%
+    group_by(poll) %>%
+    mutate(
+        r2.low = (r2 - median(r2)) < -2*sd(r2),
+        intercept.outlier = abs(intercept - median(intercept)) > 2*sd(intercept)
+        ) %>%
+    ungroup() %>%
+    arrange(sensor, poll)
 
+write.csv(results, paste0(shared.drive, 'Documentation/calibration/calibration_results', as.character(Sys.Date()), '.csv'), row.names =F)
+save(sensor.calibrations, file = paste0(shared.drive, 'Data/calibration/calibration_results.rdata'))
 
 ### Make scatterplots ###
 make.scatterplot <- function(compare, col, ref_col){
