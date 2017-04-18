@@ -1,8 +1,7 @@
-library(shiny)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(lubridate)
+list.of.packages <- c('shiny', 'ggplot2', 'dplyr', 'tidyr', 'lubridate')
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,'Package'])]
+if(length(new.packages)) install.packages(new.packages)
+suppressWarnings(suppressMessages(sapply(list.of.packages, library, character.only = T) -> .shh))
 
 setwd('..')
 source('getMESA_data.R')
