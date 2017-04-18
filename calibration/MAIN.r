@@ -1,7 +1,7 @@
 ### SET OPTIONS HERE ###
 WK.DIR = 'H:/projects/uw-radical'
-DATE.RANGE = c(as.POSIXct('2017-02-27 00:00 PST'), as.POSIXct('2017-03-01 23:59 PST'))
-MONITORS.OF.INTEREST = 9:99 # which monitors (MESA#) do you want?
+DATE.RANGE = c(as.POSIXct('2017-04-10 00:00 PST'), as.POSIXct('2017-04-14 23:59 PST'))
+MONITORS.OF.INTEREST = c(25, 12, 15, 37, 36, 33, 27)  # which monitors (MESA#) do you want?
 ########################
 
 
