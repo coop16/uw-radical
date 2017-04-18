@@ -8,10 +8,6 @@ setwd('..')
 source('getMESA_data.R')
 
 shinyServer(function(input, output) {
-  site_lookup = list(
-      'ALL' = str_extract(datafeed_get_files(), '.*(?=\\.csv)'),
-      'NYC' = c('MESA9', 'MESA10', 'MESA11', 'MESA13', 'MESA14', 'MESA16')
-      )
   dataset <- reactivePoll(30 * 1000, NULL, # check every 30 seconds whether it's time for an update
     checkFunc = function(){floor_date(Sys.time() - 30, unit = '5 mins')}, # server updates every 5 minutes on the 5's -- we'll wait 30 extra seconds to allow for clock diffs
     valueFunc = function(){
@@ -21,8 +17,10 @@ shinyServer(function(input, output) {
 
   # Timeseries plot
   output$tsplot <- renderPlot({
-    ts.plt <- ggplot(
-        dataset()[which(dataset()$tags %in% input$channel),]
+      x.min <- .POSIXct(Sys.time(), "UTC") - (input$starttime*60*60)
+      x.max <- .POSIXct(Sys.time(), "UTC") - (input$stoptime*60*60)
+      ts.plt <- ggplot(
+        dataset()[which(dataset()$tags %in% input$channel & dataset()$date <= x.max & dataset()$date >= x.min),]
       ) +
       geom_line(aes_string(x='date', y='as.numeric(value)', color = 'tags')) +
       geom_point(aes_string(x='date', y='as.numeric(value)', color = 'tags')) +
@@ -30,8 +28,8 @@ shinyServer(function(input, output) {
       theme_minimal() +
       xlab('time') +
       ylab('val') +
-      coord_cartesian(xlim = c(Sys.time() - (input$starttime*60*60), Sys.time() - (input$stoptime*60*60))) +
-      ggtitle(paste(input$channel, 'as of', as.character(max(dataset()$date)))) +
+      coord_cartesian(xlim = c(x.min, x.max)) +
+      ggtitle(paste('Data as of', as.character(max(dataset()$date)), 'UTC')) +
       theme(legend.position="top", strip.text = element_text(size=14, face="bold"))
 
 

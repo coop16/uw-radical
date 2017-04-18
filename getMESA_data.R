@@ -20,9 +20,9 @@ datafeed_download_file <- function(fnames, quiet = F){
         http.response <- GET(paste(datafeed.url, fnames, sep = '/'), authenticate(datafeed.usr, datafeed.pwd))
         if( http.response$status_code == 200 ){
             if( !quiet ){ message(fnames) }
-            read.csv(text=content(http.response, 'text', encoding = 'UTF-8')) %>%
+            read.csv(text=content(http.response, 'text', encoding = 'UTF-8'), stringsAsFactors = F) %>%
             mutate(
-                date = as.POSIXct(date, format="%Y-%m-%d %H:%M:%S",tz="America/Los_Angeles")
+                date = as.POSIXct(date, format="%Y-%m-%d %H:%M:%S", tz = 'UTC')#tz="America/Los_Angeles")
             ) %>%
             factory_gas_calibrations()
         }else{

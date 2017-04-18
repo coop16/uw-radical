@@ -3,9 +3,10 @@ library(ggplot2)
 
 shinyUI(pageWithSidebar(
 
-  headerPanel("Radical Dashboard"),
+  headerPanel("MESA Air Dashboard"),
 
   sidebarPanel(
+    "This is an experimental data viewer for live MESA Air data. Data shown is raw, has not been QA'ed, and has only had preliminary, manufacturer-provided calibrations applied. The final data used in health research will be averaged over longer time periods and will be adjusted to reflect in-house calibration exercises.",
     checkboxGroupInput('channel',
       'Channel',
       c('Plantower1_pm2_5_mass', 'Plantower2_pm2_5_mass', 'RH_val', 'S1_val', 'S2_val', 'Temp_val', 'CO_sensor', 'NO_sensor', 'NO2_sensor', 'O3_sensor'),
@@ -13,16 +14,16 @@ shinyUI(pageWithSidebar(
       ),
     sliderInput('starttime',
       'Start time (hours ago)',
-      min = 0, max = 72, value = 24, step = 6
+      min = 0, max = 72, value = 24, step = 1
       ),
     sliderInput('stoptime',
       'Stop time (hours ago)',
-      min = 0, max = 24, value = 0, step = 6
+      min = 0, max = 72, value = 0, step = 1
       ),
     selectInput('site',
         'Site',
-        c('NYC', 'ALL'),
-        selected = 'NYC'
+        names(site_lookup),
+        selected = 'New York'
         )
       #,plotOutput('tlplot')
     ),
