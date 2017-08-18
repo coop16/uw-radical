@@ -11,6 +11,7 @@ library(data.table)
 
 R.scan <- function(char.vec, splitter, component){
   if (is.na(char.vec)){temp <- NA}
+  if (splitter == "."){splitter <- "[.]"}
   else{
     temp <- rep(NA, length(char.vec))
     for (i in 1:length(char.vec)){

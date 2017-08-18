@@ -2,6 +2,9 @@
 # Functions
 # ---------
 
+library(xlsx)
+
+
 # Function : R.scan
 # -------------------------------------------------------------------------
 # Extracts a component from a character string/vector based on a splitter
@@ -11,6 +14,7 @@
  
 R.scan <- function(char.vec, splitter, component){
   if (is.na(char.vec)){temp <- NA}
+  if (splitter == "."){splitter <- "[.]"}
   else{
     temp <- rep(NA, length(char.vec))
     for (i in 1:length(char.vec)){
@@ -32,6 +36,28 @@ minisplit <- function(x){
   temp[!(temp == "")]
 }
 
+# Function: get.format
+# -------------------------------------------------------------------------
+get.format <- function(x){
+  n.x <- length(x)
+  hour <- strtoi(R.scan(x, ":",1))
+  mins <- R.scan(x, ":",2)
+  secs <- R.scan(x, ":",3)
+  hour.bool <- sum(!is.na(hour)) > 0
+  min.bool <- sum(!is.na(mins)) > 0
+  sec.bool <- sum(!is.na(secs)) > 0
+  hr.max <- max(hour, na.rm=TRUE)
+  am.pm.bool <- sum(grepl("AM|PM|A.M.|P.M.", x)) > 0
+  if (hr.max > 12) { f <- "%H"}
+  else { f <- "%I" }
+  if (min.bool){
+    f <- paste0(f, ":%M")
+    if (sec.bool){
+      f <- paste0(f, ":%S")
+  } }
+  if (am.pm.bool){ f <- paste(f, "%p") }
+  paste("%m/%d/%Y", f)
+}
 
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
@@ -61,7 +87,7 @@ for (i in filelist){
 
   # Loop through all the sites
   # --------------------------
-  for (j in 1:length(sitelist)){
+  for (j in 1:length(sitelist.1)){
     # Extract Data
     # ------------
 
@@ -90,14 +116,14 @@ for (i in filelist){
 # Some ways to check your work:
 # -----------------------------
 
-i <- filelist[1]
-j <- 1
-str(result)
-head(result[[1]])
+#i <- filelist[1]
+#j <- 1
+#str(result)
+#head(result[[1]])
 
 # Quickest way to get documentation:
 # ----------------------------------
-?strsplit
+#?strsplit
 
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
@@ -106,6 +132,29 @@ head(result[[1]])
 # -------------------------------------------------------------------------- #
 
 filelist <- list.files("X:\\Data\\calibration\\LA_reference_data")
+
+result <- list()
+
+k <- 1
+
+# Loop through the files
+for (i in filelist){
+
+  sname <- R.scan(i, "_", 1)
+  parm <- R.scan(i, "_", 2)
+
+  # Read plain text
+  temp <- read.xlsx(paste0("X:\\Data\\calibration\\LA_reference_data\\",i),1)
+  temp$value2 <- as.numeric(as.character(temp$Value))
+  temp$date <- temp[,1]
+  temp$site <- rep(sname, dim(temp)[1])
+  temp$pollutant <- rep(parm, dim(temp)[1])
+  
+  # Read and format date
+
+  result[[k]] <- temp
+  k <- k+1
+}
 
 
 # -------------------------------------------------------------------------- #
@@ -116,6 +165,27 @@ filelist <- list.files("X:\\Data\\calibration\\LA_reference_data")
 
 filelist <- list.files("X:\\Data\\calibration\\Sea_reference_data")
 
+result <- list()
+
+k <- 1
+
+# Loop through the files
+for (i in filelist){
+  sname <- R.scan(i, "_", 1)
+
+  # Read plain text
+  temp <- read.csv(paste0("X:\\Data\\calibration\\Sea_reference_data\\",i))
+  poll.cols <- 2:dim(temp)[2]
+  poll.pos <- grep("Pm25|NO|O3|CO",unlist(strsplit(names(temp)[2],"[.]")))
+  parms <- R.scan(names(temp)[poll.cols],"[.]",poll.pos)
+  names(temp)[poll.cols] <- parms
+  temp$sitename <- rep(sname, dim(temp)[1])
+  temp$date <- strptime(temp[,1], format = get.format(as.character(temp[,1])))
+
+  # Read and format date
+  result[[k]] <- temp
+  k <- k+1
+}
 
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
