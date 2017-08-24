@@ -1,51 +1,104 @@
 source('config.r', encoding = 'UTF8')
 source('getMESA_data_Kairos.r', encoding = 'UTF8') # get sensor data from Kairos
 
-filelist <- str_subset(list.files(paste0(shared.drive, 'Data/calibration/NYC_reference_data'), full.names = T), '\\.csv$')
-ref_nyc <- lapply(filelist, function(x){read.csv(x, stringsAsFactors = F, check.names = F, na.strings = c('', 'NA', 'NoData', '<Samp', 'OffScan', 'InVld', 'RS232'))}) %>% bind_rows()
+
+
+#filelist <- str_subset(list.files(paste0(shared.drive, 'Data/calibration/NYC_reference_data'), full.names = T), '\\.csv$')
+#ref_nyc <- lapply(filelist, function(x){read.csv(x, stringsAsFactors = F, check.names = F, na.strings = c('', 'NA', 'NoData', '<Samp', 'OffScan', 'InVld', 'RS232'))}) %>% bind_rows()
+
+
+#filelist <- list.files("X:\\Data\\calibration\\NYC_reference_data", pattern = '\\.xls', full.names = T)
+filelist <- list.files("X:\\Data\\calibration\\NYC_reference_data", pattern = 'NYC_[0-9]+\\.csv', full.names = T)
+result <- list()
+for( file in filelist ){
+    header <- sapply(
+        #xlsx::read.xlsx(file, 1, startRow = 2, endRow = 3, header = F, stringsAsFactors = F), #read to row 4 if you want units included in colnames
+        read.csv(file, skip = 1, nrows = 2, header = F, stringsAsFactors = F), #read to row 4 if you want units included in colnames
+        function(x){str_replace(paste(x, collapse = '_'), ' ', '')}
+    )
+    #result[[file]] <- xlsx::read.xlsx(file, 1, startRow = 5, header = F, stringsAsFactors = F)
+    result[[file]] <- read.csv(file, skip = 4, header = F, stringsAsFactors = F)
+    result[[file]] <- result[[file]][ 1:(nrow(result[[file]])-10), ] #get rid of the summary
+    names(result[[file]]) <- str_replace(header, '_$', '')
+}
+ref_nyc <- do.call(rbind, result)
+
+
 ref_nyc <- ref_nyc %>%
     mutate(
-        datetime = mdy_hm(datetime, tz = 'EST'),
+        #datetime = mdy_hm(datetime, tz = 'EST'),
+        datetime = mdy_hm(paste(Date, Time), tz = 'US/Eastern'),
         row = row_number()
         ) %>%
-    select(-`_`) %>%
+    select(-Date, -Time) %>% 
+    #select(-`_`) %>%
     gather(measurement, value, -datetime, -row, na.rm = T) %>%
     mutate(measurement = str_replace_all(measurement, ' ', '')) %>%
     separate(measurement, c('site', 'poll'), sep = '_') %>%
-    mutate(siteid = if_else(site == 'NYBG', 'N003', ifelse(site == 'IS52', 'N001', NA)))
+    mutate(
+        poll = if_else(poll == 'PM25C', 'PM25FEM', poll),
+        value = as.numeric(value),
+        siteid = if_else(
+            site == 'NYBG', 
+            'N003', 
+            if_else(
+                site == 'IS52', 
+                'N001', 
+                if_else(
+                    site == 'PS19', 
+                    'N005',
+                    if_else(
+                        site == 'CCNY', 
+                        'N004', 
+                        if_else(
+                            site == 'DivisionStreet', 
+                            'N006', 
+                            NA_character_
+                            )
+                        )
+                    )
+                )
+            )
+        )
 
 #
 # Site -> Location Match-up
 # -------------------------
 siteloc <- read.csv(paste0(shared.drive, "\\Data\\SensorLocationTable.csv")) %>%
     mutate(
-        start_time = mdy_hm(start_time, tz = 'EST'),
-        end_time = mdy_hm(end_time, tz = 'EST')
+        start_time = mdy_hm(start_time, tz = 'US/Eastern'),
+        end_time = mdy_hm(end_time, tz = 'US/Eastern')
+        ) %>%
+    mutate(
+        start_time = if_else(is.na(start_time), mdy_hm('01-01-1900 00:00', tz = 'US/Eastern'), start_time),
+        end_time   = if_else(is.na(end_time),   mdy_hm('01-01-2099 00:00', tz = 'US/Eastern'),   end_time)
         )
+        
 
 ref_nyc <- ref_nyc %>%
     inner_join(siteloc, by = 'siteid') %>%
     filter(datetime >= start_time & datetime <= end_time) %>%
+    rename(sensor = monitor) %>% 
     select(datetime, poll, value, sensor)
 
 
 #avg by 10 minutes
-ref_nyc_10min <- ref_nyc %>%
-    mutate(time.bin = floor_date(with_tz(datetime, 'UTC'), unit = '10 minutes')) %>%
-    group_by(sensor, time.bin, poll) %>%
-    summarize(ref_value = mean(value, na.rm=T)) %>%
-    ungroup()
+#ref_nyc_10min <- ref_nyc %>%
+#    mutate(time.bin = floor_date(with_tz(datetime, 'UTC'), unit = '10 minutes')) %>%
+#    group_by(sensor, time.bin, poll) %>%
+#    summarize(ref_value = mean(value, na.rm=T)) %>%
+#    ungroup()
 
 
 average.sensor.measurements <- function(df, avg_period){
     df %>%
         mutate(time.bin = floor_date(date, unit = avg_period)) %>%
-        group_by(sensor, time.bin) %>%
+        group_by(monitor, time.bin) %>%
         summarize_if(is.numeric, function(x){mean(x, na.rm=T)}) %>%
         ungroup()
 }
 # get sensor data
-suppressWarnings(suppressMessages(sensor_data <- getMESA_data(start.date = ymd_hm('2017-03-06 00:00'), stop.date = ymd_hm('2017-03-10 23:59'))))
+suppressWarnings(suppressMessages(sensor_data <- getMESA_data(start.date = ymd_hm('2017-03-01 00:00'), stop.date = ymd_hm('2017-07-10 23:59'))))
 sensor_data_long <- sensor_data$long %>% mutate(value = as.numeric(value))
 
 ref_col <- c(
@@ -61,19 +114,19 @@ ref_col <- c(
 
 sensor_data_long <- sensor_data_long %>% filter(tags %in% names(ref_col))
 
-sensor_data_long_10min <- sensor_data_long %>%
-    mutate(time.bin = floor_date(date, unit = '10 minutes')) %>%
+sensor_data_long_60min <- sensor_data_long %>%
+    mutate(time.bin = floor_date(date, unit = '60 minutes')) %>%
     select(-date) %>%
     group_by(monitor, time.bin, tags) %>%
     summarize(sensor_value = mean(value, na.rm=T)) %>%
     ungroup() %>%
     mutate(poll = ref_col[as.character(tags)])
-sensor_data_10min <- average.sensor.measurements(sensor_data, '10 minutes')
+sensor_data_60min <- average.sensor.measurements(sensor_data$wide, '60 minutes')
 
-compare <- inner_join(sensor_data_long_10min, ref_nyc_10min, by = c('monitor'='sensor', 'time.bin', 'poll'))
-compare %>% group_by(poll) %>% summarize(r2 = cor(sensor_value, ref_value)**2)
+compare <- inner_join(sensor_data_long_60min, ref_nyc, by = c('monitor'='sensor', 'time.bin'='datetime', 'poll'))
+#compare %>% group_by(poll) %>% summarize(r2 = cor(sensor_value, ref_value)**2)
 
-compare <- rename(compare, sensor = monitor)
+compare <- rename(compare, sensor = monitor, ref_value = value) 
 
 #sitename <- list()
 #rawdata <- list()

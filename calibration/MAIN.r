@@ -21,6 +21,7 @@ print('loading ozone');source('calibration/load_O3_ref.r', encoding = 'UTF8') # 
 print('loading de');source('calibration/load_DE_ref.r', encoding = 'UTF8') # load raw files from folders like rad/calibration/MESA_NLk_Colocation_Data_[date]/
 print('loading kairos');source('getMESA_data_Kairos.r', encoding = 'UTF8') # get sensor data from Kairos
 suppressWarnings(suppressMessages(sensor_data <- getMESA_data(start.date = DATE.RANGE[1], stop.date = DATE.RANGE[2])))
+sensor_data$wide <- sensor_data$wide %>% rename(sensor = monitor)
 sensor_data <- sensor_data$wide %>% filter(sensor %in% paste0('MESA', MONITORS.OF.INTEREST))
 
 ### Prepare sensor data ###

@@ -81,6 +81,7 @@ getMESA_data <- function(){
 #  new.temp %>% bind_rows() %>% factory_gas_calibrations()# Download each csv and combine
 #}
 
+
 get_colo <- function(agency.name, site.loc = sensor.loc, quiet = F){
   datafeed.files <- datafeed_get_files()[datafeed_get_files() %in% paste0(site.loc$monitor[site.loc$sitename == agency.name],".csv")] # Find files to download
   lapply(datafeed.files, function(x){datafeed_download_file(x, quiet = quiet)}) %>% bind_rows() %>% factory_gas_calibrations()# Download each csv and combine
