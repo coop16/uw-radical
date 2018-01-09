@@ -1,0 +1,18 @@
+/*ADD a floating table of contents on the left side of an Rmarkdown file */
+
+
+/*Add table of contents on left side */
+#TOC {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 400px;
+  height: 100%;
+  overflow:auto;
+}
+
+/* Shift body to side so have      */
+body {
+  margin: auto;
+  margin-left:500px;
+}

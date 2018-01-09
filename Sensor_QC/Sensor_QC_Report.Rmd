@@ -1,0 +1,140 @@
+---
+title: "Low Cost Sensor QC Weekly Report"
+output:
+    html_document:
+      css: custom.css
+      toc: yes
+      self_contained: no
+---
+<!-- Added 'self_contained: no' so would run without error. It creates a folder that can be ignored --> 
+<!-- Added the 'toc:yes' and css file to add a table of contents on the side for easier navigation --> 
+
+
+
+
+
+<br>
+<br>
+<br>
+
+```{r message=F, warning=F, echo=F}
+################################################################################
+#import latest version of full dataset
+################################################################################
+library(readr)
+fulldat<- read_csv("X:/Data/rawdata/sensor_data.csv")
+
+```
+
+
+
+#Completeness
+```{r message=F, warning=F, echo=F}
+################################################################################
+# This code chunk loads the data for the past week and defines completeness functions
+################################################################################
+
+#set working directory to location of all files
+setwd("X:/Production_Code/sensor_QC/")
+source("completenessCode.R")
+
+```
+
+
+##Monitors Without Any Data For One or More Days Last Week
+(_i.e. Monitors which didn't have any data (not even NA's), due to transimssion issues or being serviced etc._)
+
+```{r message=F,warning=FALSE, echo=F, results='asis'}
+################################################################################
+# This code chunk outputs a table with monitors that didn't collect any data for at least one day
+################################################################################
+library(knitr) #for kable()
+library(kableExtra)
+
+#get list of monitors
+monitorlist<-getMonitorList(fulldat)
+
+#get subset of data from last week
+wk<-getLastWeek()
+
+#get monitors with some days missing from last week
+tab<-getMissingMonitors(monitorlist,wk)
+kable(tab,"html") %>%
+   kable_styling(bootstrap_options = c("striped", "condensed"))
+
+```
+
+
+##Lowest Completeness Proportions 
+(_i.e. Monitors with at least one sensor measure having below 90% completeness_)
+
+```{r message=F,warning=FALSE, echo=F, results='asis'}
+################################################################################
+# This code chunk outputs completeness tables with most important information
+################################################################################
+
+#get basic summary of worst behaving monitors
+tab<-getBasicSummary(wk)
+kable(tab,"html") %>%
+   kable_styling(bootstrap_options = c("striped", "condensed")) %>%
+    column_spec(6,  background = "gold")
+
+
+```
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+#Appendix
+
+##Completeness
+```{r message=F,warning=FALSE, echo=F, results='asis'}
+################################################################################
+# This code chunk outputs completeness tables for each Monitor (for the Appendix)
+#    > Completeness for each sensor within mononitor for each day
+################################################################################
+
+library(pander) #to create markdown header outputs
+
+#Add full completeness data for each monito
+for(monitor in monitorlist){
+  
+  #add markdown header for monitor (Note: we added a floating toc to account for the massive toc size)
+  pandoc.header(monitor,level=3)
+
+  #print table
+  tab<-getMonitorCompleteness(monitor,wk)
+  print(kable(tab))
+}
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- Add the date of the title at the end to data from the r chunks --> 
+
+---
+date: "`r paste0("Data from ",format(min(as.Date(as.POSIXlt(wk$date))),"%m-%d-%Y")," through  ", format(max(as.Date(as.POSIXlt(wk$date))),"%m-%d-%Y")  )
+`"
+---
