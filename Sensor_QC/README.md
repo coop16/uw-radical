@@ -15,7 +15,8 @@ Process
 -   Perform weekly
     -   Idealy on run Mondays, but generalized so that could be run later in the week and produce a report the same as if run on Monday
 -   Steps
-    1.  Run the file `Update_Sensor_Data.R` to download *all* sensor data and write to csv: `sensor_data.csv` located in X:/Data/rawdata/.
+    1.  Run the file `Update_Sensor_Data.R` to download *all* sensor data and write to `sensor_data.csv` saved in X:/Data/rawdata/.  
+        -  So `sensor_data.csv` will be updated once a week and keep the same file name.  **Only do this step once a week since it takes time.**
     2.  (After the data has been updated) Compile the report using `Sensor_QC_Report.Rmd` located in X:/Production\_code/sensor\_QC/, which will output an html report `Sensor_QC_Report.Rmd`
         -  At the time this document was created, there was a bug compiling Rmarkdown files on the DEOHS computers using Windows.  You may have to open the `Command Prompt` and run the following code:    
 `H:`
