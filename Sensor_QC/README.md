@@ -25,7 +25,7 @@ Process
 
 `copy default.html D0CS9J~9.html`
            
-    3.  Rename the html output document by adding on the report date at the end (for example `Sensor_QC_Report_01_08_18.Rmd`)
+   3.  Rename the html output document by adding on the report date at the end (for example `Sensor_QC_Report_01_08_18.Rmd`)
         -   Use the date of the Monday the report was run (the day after the range of dates in the report)
         -   I hope to make this renaming step automatic eventually
 
