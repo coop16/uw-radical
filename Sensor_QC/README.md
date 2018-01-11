@@ -54,7 +54,7 @@ Description of Files
 <tr class="odd">
 <td>GetAccessTables.R</td>
 <td>X:/Production_Code/sensor_QC/</td>
-<td>Script to get location data from Access Database (required to run "Update_Sensor_Data.R"</td>
+<td>Script to get location data from Access Database (required to run "Update_Sensor_Data.R")</td>
 </tr>
 <tr class="even">
 <td>Sensor_QC_Report.Rmd</td>
