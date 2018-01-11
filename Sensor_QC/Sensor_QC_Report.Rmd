@@ -8,10 +8,7 @@ output:
 ---
 <!-- Added 'self_contained: no' so would run without error. It creates a folder that can be ignored --> 
 <!-- Added the 'toc:yes' and css file to add a table of contents on the side for easier navigation --> 
-
-
-
-
+<!-- Added the custom knit so that saves file with the date at the end (so new file name each week) --> 
 
 <br>
 <br>
@@ -41,8 +38,8 @@ source("completenessCode.R")
 ```
 
 
-##Monitors Without Any Data For One or More Days Last Week
-(_i.e. Monitors which didn't have any data (not even NA's), due to transimssion issues or being serviced etc._)
+##Monitors Without Any Data From Last Week
+(_i.e. Due to transimssion issues or being serviced etc._)
 
 ```{r message=F,warning=FALSE, echo=F, results='asis'}
 ################################################################################
@@ -50,6 +47,7 @@ source("completenessCode.R")
 ################################################################################
 library(knitr) #for kable()
 library(kableExtra)
+library(pander)
 
 #get list of monitors
 monitorlist<-getMonitorList(fulldat)
@@ -57,13 +55,15 @@ monitorlist<-getMonitorList(fulldat)
 #get subset of data from last week
 wk<-getLastWeek()
 
-#get monitors with some days missing from last week
-tab<-getMissingMonitors(monitorlist,wk)
-kable(tab,"html") %>%
-   kable_styling(bootstrap_options = c("striped", "condensed"))
+#get monitors without any data
+missmonlist<-getMissingMonitors(monitorlist,wk)
+
+#output code with code right after chunk
 
 ```
+**`r missmonlist`**
 
+<br>
 
 ##Lowest Completeness Proportions 
 (_i.e. Monitors with at least one sensor measure having below 90% completeness_)
@@ -77,7 +77,7 @@ kable(tab,"html") %>%
 tab<-getBasicSummary(wk)
 kable(tab,"html") %>%
    kable_styling(bootstrap_options = c("striped", "condensed")) %>%
-    column_spec(6,  background = "gold")
+    column_spec(1:4,  background = "lightgray")
 
 
 ```
@@ -98,17 +98,25 @@ kable(tab,"html") %>%
 #    > Completeness for each sensor within mononitor for each day
 ################################################################################
 
-library(pander) #to create markdown header outputs
-
 #Add full completeness data for each monito
 for(monitor in monitorlist){
   
   #add markdown header for monitor (Note: we added a floating toc to account for the massive toc size)
   pandoc.header(monitor,level=3)
 
-  #print table
+  #get table with all monitor data
   tab<-getMonitorCompleteness(monitor,wk)
-  print(kable(tab))
+  
+  #only give comments on table if actually have data
+  if(!is.null(dim(tab)) ){
+      Pandoc.brew(text="*  The first row gives the total possible observations for the week/day. ")
+      Pandoc.brew(text="*  Each cell in the rest of the table shows the *complete observations (Percent complete)* for the specified sensor.")
+  }
+  
+  #print table
+  print(kable(tab,row.names = FALSE,format = "html") %>%
+   kable_styling(bootstrap_options = c("striped", "condensed")) %>%
+    row_spec(1,  background = "lightgray") )
 }
 
 

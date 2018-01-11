@@ -59,34 +59,37 @@ return(sortedMonitors)
 
 
 #-----------------------------------------------------------------------------------------------------------------#
-#Get monitors without data for at least one day in past week
+#Get monitors without any data for the past week
 #-----------------------------------------------------------------------------------------------------------------#
 
 getMissingMonitors<-function(monlist,weekdata){
   
-  library(data.table)
+  #get list of monitors which we have data for in past week
+  wkmonlist<-unique(weekdata$monitor)
   
-  #create empty vector
-  daysofweek<-rep(NA,length(monlist) )
+  #get list of monitors we have data for ever, but not for this week
+  missingmonitors<-setdiff(monlist,wkmonlist)
   
-  #fill in number of days with data for each monitor
-  for(i in 1:length(monlist)){
-    #get subset of data for the particular monitor  
-    mdat<-subset(weekdata,monitor==monlist[i])
-    daysofweek[i]<-length(unique(as.Date(as.POSIXlt(mdat$date))))
-  }
-  
-  daysofweek.df<-as.data.frame(cbind(monlist,daysofweek))
-  missdays<-subset(daysofweek.df,daysofweek!=7)  
-  ordered<-setkey(as.data.table(missdays),'daysofweek')
-  colnames(ordered)<-c("Monitor","Number of Days with Data ")
-  return(ordered)
+  return(missingmonitors)
 }
 
 #-----------------------------------------------------------------------------------------------------------------#
 #Get all completeness data for a single monitor (by day)
 #-----------------------------------------------------------------------------------------------------------------#
-getMonitorCompleteness<-function(mon,weekdata){
+getMonitorCompleteness<-function(mon,weekdata,fulldata){
+  
+  #get maximum sample size by any monitor for the week
+  numbercompletepermonitor <- aggregate(x = weekdata, by = list(weekdata$monitor), FUN = function(x) sum(!is.na(x)))
+  maxcomplete<-max(numbercompletepermonitor[,-1])  
+  
+  #get maximum sample size by any monitor for each day
+  daylist<-unique(as.Date(as.POSIXlt(weekdata$date)) )
+  maxDayObs<-rep(NA,7)
+  for(i in 1:7){
+    dayData<-subset(weekdata,as.Date(as.POSIXlt(date))==daylist[i])
+    numbercompletepermonitor_day<- aggregate(x = dayData, by = list(dayData$monitor), FUN = function(x) sum(!is.na(x)))
+    maxDayObs[i]<-max(numbercompletepermonitor_day[,-1])  
+  }
   
   #get subset of data for the particular monitor  
   mdat<-subset(weekdata,monitor==mon)
@@ -96,63 +99,78 @@ getMonitorCompleteness<-function(mon,weekdata){
     return("No Data Collected for this monitor last week.")
   }else{
     
-    #get sample size, # complete and proportion complete for each day
-    dailycount = aggregate(x = mdat, by = list(  as.Date(as.POSIXlt(mdat$date))   ), FUN = length)
+    #get complete sensor observations for each day
     dailycomplete = aggregate(x = mdat, by = list(as.Date(as.POSIXlt(mdat$date)) ), FUN = function(x) sum(!is.na(x)))
-    dailycompleteprop = aggregate(x = mdat, by = list(as.Date(as.POSIXlt(mdat$date)) ), FUN = function(x) round(mean(!is.na(x)),digits = 3  ) )
     
-    #add row for week total to each count table (we'll deal with proportion table later )
-    newdailycount<-rbind(apply(dailycount[,-1],2,sum) ,dailycount[-1])
-    row.names(newdailycount)<-c("Week",as.character(dailycount$Group.1))
-    newdailycomplete<-rbind(apply(dailycomplete[,-1],2,sum) ,dailycomplete[-1])
-    row.names(newdailycomplete)<-c("Week",as.character(dailycomplete$Group.1))
+    #get maximum observations possible for each day with data observed (should only vary by 1 or two at most per day)
+    maxDayObs_mon<-maxDayObs[daylist %in% unique(as.Date(as.POSIXlt(mdat$date)))]
 
-    #create table that shows "sample size , # complete (percent complete)" in each cell
-      #just make copy of a table with correct dimensions
-      dailyAllInfo<-newdailycount[,3:dim(newdailycount)[2]] 
-      
-      #fill in table
-      for(i in 3:dim(newdailycount)[2]){
-        dailyAllInfo[colnames(newdailycount)[i] ]<-paste0(newdailycount[,i]," , ",newdailycomplete[,i]," (",round(newdailycomplete[,i]/newdailycount[,i],digits=2)*100,"%)")
-      }
+    #get proportion complete for each day
+    dailycompleteprop <- dailycomplete
+    for(i in 1:dim(dailycompleteprop)[1] ){
+      dailycompleteprop[i,-1]<-round( dailycompleteprop[i,-1]/maxDayObs_mon[i] ,digits=2)
+    }
+    
+    #complete sensor observations for entire week
+    weekcomplete<-c(apply(dailycomplete[,4:dim(dailycomplete)[2]],2,sum) )
+    
+    #Row for sample size (maximum observations we could observe if all complete)
+    possibleSampleSize<-c(maxcomplete,maxDayObs_mon)
+    
+    #create table with # complete in each cell and column for whole week
+    dailyAllInfo<-cbind(weekcomplete,t(dailycomplete[,4:length(dailycomplete)]))
+    
+    #add row with sample size
+    dailyAllInfo<-rbind("Sample Size"=possibleSampleSize,dailyAllInfo)
+    
+    #Add percentages to each cell in table (besides first row)
+    for(i in 1:dim(dailyAllInfo)[2] ){
+      dailyAllInfo[-1,i]<-paste0(dailyAllInfo[-1,i]," (", round(as.numeric(dailyAllInfo[-1,i])/as.numeric(dailyAllInfo[1,i]) , digits=2)*100 , "%)" )
+    }
+    
+    #add more formatting
+    outputtab<-as.data.frame(cbind(rownames(dailyAllInfo),dailyAllInfo) )
+    colnames(outputtab)<-c(" ","Week",as.character(daylist[daylist %in% unique(as.Date(as.POSIXlt(mdat$date)))]) )
     
     #return table with all info
-    return(t(as.data.frame(dailyAllInfo)))
+    return(outputtab)
   }
 }
 
 #-----------------------------------------------------------------------------------------------------------------#
 #get basic summary data for all monitors 
 #-----------------------------------------------------------------------------------------------------------------#
-getBasicSummary<-function(weekdata){
-
-  #get number complete and number na for each sensor for each monitor
-  totalcount<- aggregate(x = weekdata, by = list(weekdata$monitor), FUN = length)
+getBasicSummary<-function(weekdata,monlist){
+  
+  #get number complete for each monitor
   numbercomplete <- aggregate(x = weekdata, by = list(weekdata$monitor), FUN = function(x) sum(!is.na(x)))
+  
+  #maximum number of observations for previous week by any monitor
+  maxcomplete<-max(numbercomplete[,-1])
 
-  #sample size for monitor (all sensors)
-  nAllSensors<-apply(totalcount[,4:33],1,sum)
-
-  #average completeness proportion for all pm measures
-  pmProp<-round(apply(numbercomplete[,4:21]/totalcount[,4:21],1,mean) ,digits=2)
+  #average completeness proportion for all Plantower pm measures
+  plantowerProp<-round(apply(numbercomplete[,4:21]/maxcomplete,1,mean) ,digits=2)
+  
+  #average completeness proportion for Shinyei measures
+  shinyeiProp<-round(apply(numbercomplete[,32:33]/maxcomplete,1,mean) ,digits=2)
   
   #average completeness proportion for all gas measures
-  gasProp<-round(apply(numbercomplete[,24:31]/totalcount[,24:31],1,mean) ,digits=2)  
+  gasProp<-round(apply(numbercomplete[,24:31]/maxcomplete,1,mean) ,digits=2)  
   
   #average completeness proportion across all sensor measures
-  aveProp<-round(apply(numbercomplete[,4:33]/totalcount[,4:33],1,mean) ,digits=2)
+  aveProp<-round(apply(numbercomplete[,4:33]/maxcomplete,1,mean) ,digits=2)
   
   #minimum proportion complete for measure of a given monitor
-  minProp<-round(apply(numbercomplete[,4:33]/totalcount[,4:33],1,min) ,digits=2)
+  minProp<-round(apply(numbercomplete[,4:33]/maxcomplete,1,min) ,digits=2)
   
   #create table of basic summary information
-  #sample size, PM completeness, Gas completeness, Total average completeness, Minimum Sensor Completeness
+  #sample size, Plantower completeness, Shinyei completeness, Gas completeness, Total average completeness, Minimum Sensor Completeness
   #only output monitors with at least one sensor with below 90% completeness
-  basicSummaryTab<-cbind(totalcount$Group.1,nAllSensors,pmProp,gasProp,aveProp,minProp)
+  basicSummaryTab<-cbind(numbercomplete$Group.1,maxcomplete,aveProp,minProp,plantowerProp,shinyeiProp,gasProp)
   orderedtab<-as.data.table(basicSummaryTab)
   setkey(orderedtab,"minProp")    
   smalltab<-orderedtab[orderedtab$minProp<.9,]
-  colnames(smalltab)<-c("Monitor","Sample Size","PM Completeness","Gas Completeness","Ave. Completeness","Min. Sensor Completeness")
+  colnames(smalltab)<-c("Monitor","Sample Size","Ave. Sensor Completeness","Min. Sensor Completeness","Ave. Plantower Completeness","Ave. Shinyei Completeness","Ave. Gas Completeness")
   
   return(smalltab)
 }
