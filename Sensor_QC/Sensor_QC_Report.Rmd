@@ -9,6 +9,7 @@ output:
 <!-- Added 'self_contained: no' so would run without error. It creates a folder that can be ignored --> 
 <!-- Added the 'toc:yes' and css file to add a table of contents on the side for easier navigation --> 
 
+
 <br>
 <br>
 <br>

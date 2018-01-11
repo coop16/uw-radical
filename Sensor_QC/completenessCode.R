@@ -65,10 +65,10 @@ getMissingMonitors<-function(monlist,weekdata){
   
   #get list of monitors which we have data for in past week
   wkmonlist<-unique(weekdata$monitor)
-  
+
   #get list of monitors we have data for ever, but not for this week
   missingmonitors<-setdiff(monlist,wkmonlist)
-  
+
   return(missingmonitors)
 }
 
@@ -80,6 +80,7 @@ getMonitorCompleteness<-function(mon,weekdata,fulldata){
   #get maximum sample size by any monitor for the week
   numbercompletepermonitor <- aggregate(x = weekdata, by = list(weekdata$monitor), FUN = function(x) sum(!is.na(x)))
   maxcomplete<-max(numbercompletepermonitor[,c(2:34)])  #only consider sensor data (remove monitor and location)
+
   
   #get maximum sample size by any monitor for each day
   daylist<-unique(as.Date(as.POSIXlt(weekdata$date)) )
@@ -88,6 +89,7 @@ getMonitorCompleteness<-function(mon,weekdata,fulldata){
     dayData<-subset(weekdata,as.Date(as.POSIXlt(date))==daylist[i])
     numbercompletepermonitor_day<- aggregate(x = dayData, by = list(dayData$monitor), FUN = function(x) sum(!is.na(x)))
     maxDayObs[i]<-max(numbercompletepermonitor_day[,c(2:34)])  #only consider sensor data (remove monitor and location)
+
   }
   
   #get subset of data for the particular monitor  
@@ -107,6 +109,7 @@ getMonitorCompleteness<-function(mon,weekdata,fulldata){
     #get proportion complete for each day
     dailycompleteprop <- dailycomplete
     dailycompleteprop["site_id"]<-NULL
+
     for(i in 1:dim(dailycompleteprop)[1] ){
       dailycompleteprop[i,-1]<-round( dailycompleteprop[i,-1]/maxDayObs_mon[i] ,digits=2)
     }
