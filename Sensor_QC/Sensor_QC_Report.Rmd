@@ -8,7 +8,7 @@ output:
 ---
 <!-- Added 'self_contained: no' so would run without error. It creates a folder that can be ignored --> 
 <!-- Added the 'toc:yes' and css file to add a table of contents on the side for easier navigation --> 
-<!-- Added the custom knit so that saves file with the date at the end (so new file name each week) --> 
+
 
 <br>
 <br>
@@ -19,7 +19,9 @@ output:
 #import latest version of full dataset
 ################################################################################
 library(readr)
-fulldat<- read_csv("X:/Data/rawdata/sensor_data.csv")
+
+#version with site ID
+fulldat <- read_csv("X:/Data/rawdata/sensor_data.csv")
 
 ```
 

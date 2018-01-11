@@ -23,14 +23,13 @@ getLastWeek <- function(fromLastMonday=T){
     querydate<-lastMonday(currDate)
   }else{
     querydate<-currDate
-    
   }
   
   #get subset of data from past week 
   lastweekdat<-subset(x = fulldat,as.Date(as.POSIXlt(date)) >= (querydate-7) & as.Date(as.POSIXlt(date)) < querydate  )
 
-  # Drop index (first column) and CO_sensor,NO_sensor, NO2_sensor, O3_sensor (last 4 columns)
-  lastweekdat <- lastweekdat[,2:(ncol(lastweekdat)-4)]
+  # Drop CO_sensor,NO_sensor, NO2_sensor, O3_sensor 
+  lastweekdat[c("CO_sensor","NO_sensor","NO2_sensor","O3_sensor")]<-NULL
   
   return(lastweekdat)
 }
@@ -66,10 +65,10 @@ getMissingMonitors<-function(monlist,weekdata){
   
   #get list of monitors which we have data for in past week
   wkmonlist<-unique(weekdata$monitor)
-  
+
   #get list of monitors we have data for ever, but not for this week
   missingmonitors<-setdiff(monlist,wkmonlist)
-  
+
   return(missingmonitors)
 }
 
@@ -80,7 +79,8 @@ getMonitorCompleteness<-function(mon,weekdata,fulldata){
   
   #get maximum sample size by any monitor for the week
   numbercompletepermonitor <- aggregate(x = weekdata, by = list(weekdata$monitor), FUN = function(x) sum(!is.na(x)))
-  maxcomplete<-max(numbercompletepermonitor[,-1])  
+  maxcomplete<-max(numbercompletepermonitor[,c(2:34)])  #only consider sensor data (remove monitor and location)
+
   
   #get maximum sample size by any monitor for each day
   daylist<-unique(as.Date(as.POSIXlt(weekdata$date)) )
@@ -88,7 +88,8 @@ getMonitorCompleteness<-function(mon,weekdata,fulldata){
   for(i in 1:7){
     dayData<-subset(weekdata,as.Date(as.POSIXlt(date))==daylist[i])
     numbercompletepermonitor_day<- aggregate(x = dayData, by = list(dayData$monitor), FUN = function(x) sum(!is.na(x)))
-    maxDayObs[i]<-max(numbercompletepermonitor_day[,-1])  
+    maxDayObs[i]<-max(numbercompletepermonitor_day[,c(2:34)])  #only consider sensor data (remove monitor and location)
+
   }
   
   #get subset of data for the particular monitor  
@@ -107,18 +108,20 @@ getMonitorCompleteness<-function(mon,weekdata,fulldata){
 
     #get proportion complete for each day
     dailycompleteprop <- dailycomplete
+    dailycompleteprop["site_id"]<-NULL
+
     for(i in 1:dim(dailycompleteprop)[1] ){
       dailycompleteprop[i,-1]<-round( dailycompleteprop[i,-1]/maxDayObs_mon[i] ,digits=2)
     }
     
     #complete sensor observations for entire week
-    weekcomplete<-c(apply(dailycomplete[,4:dim(dailycomplete)[2]],2,sum) )
+    weekcomplete<-c(apply(dailycomplete[,4:33 ],2,sum) )
     
     #Row for sample size (maximum observations we could observe if all complete)
     possibleSampleSize<-c(maxcomplete,maxDayObs_mon)
     
     #create table with # complete in each cell and column for whole week
-    dailyAllInfo<-cbind(weekcomplete,t(dailycomplete[,4:length(dailycomplete)]))
+    dailyAllInfo<-cbind(weekcomplete,t(dailycomplete[,4:33]))
     
     #add row with sample size
     dailyAllInfo<-rbind("Sample Size"=possibleSampleSize,dailyAllInfo)
@@ -146,7 +149,7 @@ getBasicSummary<-function(weekdata,monlist){
   numbercomplete <- aggregate(x = weekdata, by = list(weekdata$monitor), FUN = function(x) sum(!is.na(x)))
   
   #maximum number of observations for previous week by any monitor
-  maxcomplete<-max(numbercomplete[,-1])
+  maxcomplete<-max(numbercomplete[,2:33])
 
   #average completeness proportion for all Plantower pm measures
   plantowerProp<-round(apply(numbercomplete[,4:21]/maxcomplete,1,mean) ,digits=2)
