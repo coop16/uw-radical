@@ -19,12 +19,15 @@ Process
         -  So `sensor_data.csv` will be updated once a week and keep the same file name.  
         -  **Only do this step once a week since it takes time.**
         -  (*Still need to add code to merge the location data with sensor data*)
-    2.  (After the data has been updated) Compile the report using `Sensor_QC_Report.Rmd` located in X:/Production\_code/sensor\_QC/, which will output an html report `Sensor_QC_Report_dateofreport.html`, where *dateofreport* is automated to be the Monday after the report interval (i.e. the day in which the report should usually be compiled). 
-        -  At the time this document was created, there was a bug compiling Rmarkdown files on the DEOHS computers using Windows.  If you get an error you may have to open the `Command Prompt` and run the following code:    
+    2.  (After the data has been updated) Compile the report using `Sensor_QC_Report.Rmd` located in X:/Production\_code/sensor\_QC/, which will output an html report `Sensor_QC_Report.Rmd`
+        -  At the time this document was created, there was a bug compiling Rmarkdown files on the DEOHS computers using Windows.  You may have to open the `Command Prompt` and run the following code:    
 `H:`
 `cd \My Documents\R\win-library\3.4\rmarkdown\rmd\h`
 `copy default.html D0CS9J~9.html`
           
+    3.  Rename the html output document by adding on the report date at the end (for example `Sensor_QC_Report_01_08_18.Rmd`)
+        -   Use the date of the Monday the report was run (the day after the range of dates in the report)
+        -   I hope to make this renaming step automatic eventually
 
 Description of Files
 ====================
