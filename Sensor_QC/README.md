@@ -1,6 +1,5 @@
 StepsForRunningReport
 ================
-Updated 01-09-2018
 
 Overview of Document
 ====================
@@ -15,19 +14,11 @@ Process
 -   Perform weekly
     -   Idealy on run Mondays, but generalized so that could be run later in the week and produce a report the same as if run on Monday
 -   Steps
-    1.  Run the file `Update_Sensor_Data.R` to load *all* sensor data, load location data from Access database, add site ID to the sensor data, and write to `sensor_data.csv` saved in X:/Data/rawdata/.  
-        -  So `sensor_data.csv` will be updated once a week and keep the same file name.  
-        -  **Only do this step once a week since it takes time.**
-
-    2.  (After the data has been updated) Compile the report using `Sensor_QC_Report.Rmd` located in X:/Production\_code/sensor\_QC/, which will output an html report `Sensor_QC_Report.html`.  See Rmarkdown note below if you experience an error compiling.
-          
-    3.  Rename the html output document (`Sensor_QC_Report.html`) by adding on the report date at the end (for example `Sensor_QC_Report_01_08_18.Rmd`).  Save the file in `X:/SensorQC_Reports/`.
-        -   Use the date of the Monday the report was run (the day after the range of dates in the report)
-        -   May have to edit the name by opening in a text editor and saving due to the extra folder created with the Rmarkdown bug work around we use.
-        -   I hope to make this renaming step automatic eventually
+    1.  Run the file `Update_Sensor_Data.R`, which loads *all* sensor data, loads location data from Access database, adds site ID to the sensor data, and writes to `sensor_data.csv` saved in X:/Data/rawdata/.  
+        -  **Only do this step to update files once a week (unless have a specific reason) since it takes time.**
+    2.  (After the data has been updated) Run the file `Compile_Sensor_QC_Report.R` located in X:/Production\_code/sensor\_QC/.  This will compile the R markdown file `Sensor_QC_Report.Rmd`, and output an html report `Sensor_QC_Report_reportdate.html`, where *reportdate* is the Monday after the monitoring interval of the report (Monday was chosen because that is the day the report should usually be compiled).  The html report is saved in its own folder "X:/SensorQC_Reports" away from the other code.
         
-        
-**Rmarkdown note:** At the time this document was created, there was a bug compiling Rmarkdown files on the DEOHS computers using Windows.  You may have to open the `Command Prompt` and run the following code: 
+**Rmarkdown note:** At the time this document was created, there was a bug compiling Rmarkdown files on the DEOHS computers using Windows.  If you are having issues compiling Rmarkdown documents on the department computers you may have to open the `Command Prompt` and run the following code: 
 ```
 H:
 cd \My Documents\R\win-library\3.4\rmarkdown\rmd\h
@@ -61,17 +52,22 @@ Description of Files
 <tr class="odd">
 <td>Update_Sensor_Data.R</td>
 <td>X:/Production_Code/sensor_QC/</td>
-<td>Download sensor data and write to csv</td>
+<td>Download all sensor and location data, merge, and write to csv</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>GetAccessTables.R</td>
 <td>X:/Production_Code/sensor_QC/</td>
 <td>Script to get location data from Access Database (required to run "Update_Sensor_Data.R")</td>
 </tr>
+<tr class="odd">
+<td>Compile_Sensor_QC_Report.R</td>
+<td>X:/Production_Code/sensor_QC/</td>
+<td>Runs "Sensor_QC_Report.Rmd" but outputs a file with the report date in the filename (to avoid manually renaming each week when compiling the report). </td>
+</tr>
 <tr class="even">
 <td>Sensor_QC_Report.Rmd</td>
 <td>X:/Production_Code/sensor_QC/</td>
-<td>Outputs and html report</td>
+<td>Produces the html report</td>
 </tr>
 <tr class="odd">
 <td>custom.css</td>
