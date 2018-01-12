@@ -21,6 +21,6 @@ conAccdb <- odbcConnectAccess2007(inCopyDbPath)
 sensorlocations <- sqlFetch (conAccdb,"sensor_location_tbl")
 
 ## Save the tables
-save(sensorlocations, file = "H:/Sensor_QC/sensor_location_data.rda")
+save(sensorlocations, file = "X:/Data/rawdata/sensor_location_data.rda")
 
 close(conAccdb)
