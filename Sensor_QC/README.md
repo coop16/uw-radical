@@ -21,8 +21,9 @@ Process
 
     2.  (After the data has been updated) Compile the report using `Sensor_QC_Report.Rmd` located in X:/Production\_code/sensor\_QC/, which will output an html report `Sensor_QC_Report.html`.  See Rmarkdown note below if you experience an error compiling.
           
-    3.  Rename the html output document (`Sensor_QC_Report.html`) by adding on the report date at the end (for example `Sensor_QC_Report_01_08_18.Rmd`)
+    3.  Rename the html output document (`Sensor_QC_Report.html`) by adding on the report date at the end (for example `Sensor_QC_Report_01_08_18.Rmd`).  Save the file in `X:/SensorQC_Reports/`.
         -   Use the date of the Monday the report was run (the day after the range of dates in the report)
+        -   May have to edit the name by opening in a text editor and saving due to the extra folder created with the Rmarkdown bug work around we use.
         -   I hope to make this renaming step automatic eventually
         
         
