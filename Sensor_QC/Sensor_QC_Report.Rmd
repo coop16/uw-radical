@@ -9,7 +9,6 @@ output:
 <!-- Added 'self_contained: no' so would run without error. It creates a folder that can be ignored --> 
 <!-- Added the 'toc:yes' and css file to add a table of contents on the side for easier navigation --> 
 
-
 <br>
 <br>
 <br>
@@ -41,7 +40,6 @@ source("completenessCode.R")
 
 
 ##Monitors Without Any Data From Last Week
-(_i.e. Due to transimssion issues or being serviced etc._)
 
 ```{r message=F,warning=FALSE, echo=F, results='asis'}
 ################################################################################
@@ -60,10 +58,21 @@ wk<-getLastWeek()
 #get monitors without any data
 missmonlist<-getMissingMonitors(monitorlist,wk)
 
-#output code with code right after chunk
+#output lists with code right after chunk
 
 ```
-**`r missmonlist`**
+
+*  **Unexpected to be missing:** <span style="color:red"> **`r c(missmonlist[missmonlist[,2]==0,1])`** </span>
+<br>
+
+*  Expected to have no data:  `r c(missmonlist[missmonlist[,2]==1 | missmonlist[,2]==2 ,1])`
+
+<br>
+(_Expectations based on location table in Access Database.  If that database is not up to date these monitors may be incorrectly categorized._)
+
+
+
+
 
 <br>
 
@@ -79,7 +88,9 @@ missmonlist<-getMissingMonitors(monitorlist,wk)
 tab<-getBasicSummary(wk)
 kable(tab,"html") %>%
    kable_styling(bootstrap_options = c("striped", "condensed")) %>%
-    column_spec(1:4,  background = "lightgray")
+    column_spec(1:4,  background = "lightgray") %>%
+    column_spec(1,  color = "red", bold=T)
+
 
 
 ```

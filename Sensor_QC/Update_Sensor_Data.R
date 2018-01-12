@@ -23,11 +23,11 @@ fetchAllSensorsData <- function() {
 #------------------------------------------------------------------------------------------------------------#
 fetchSensorLocationData <- function(){
   ## set the 32-bit script location
-  pathIn32BitRScript <- "H:/Sensor_QC/GetAccessTables.R"
+  pathIn32BitRScript <- "X:/Production_code/sensor_QC/GetAccessTables.R"
   ## run the 32 bit script GetAcessTables.R
   system(paste0(Sys.getenv("R_HOME"), "/bin/i386/Rscript.exe ",pathIn32BitRScript))
   ## Set the path for loading the rda file created from GetAccessTables.R 
-  pathOutUpAccdb <- "H:/Sensor_QC/"
+  pathOutUpAccdb <- "X:/Data/rawdata/"
   ## load the sensor location table we just created
   load(paste0(pathOutUpAccdb,"sensor_location_data.rda"))
   
@@ -54,7 +54,7 @@ addLocations<-function(sensordat,locationdat){
     #loop accross location file entries and add site_id to sensor data
     for(i in 1:nrow(locationdat)){
       #indicator that correct monitor ID and within the time range
-      time_ind<- sensordat$monitor==as.character(locationdat$monitor_id[i]) & sensordat$date >  utc_start_time[i] & sensordat$date <  utc_end_time[i] 
+      time_ind<- sensordat$monitor==as.character(locationdat$monitor_id[i]) & sensordat$date >=  utc_start_time[i] & sensordat$date <=  utc_end_time[i] 
       #add site_id to sensor data that match the monitor/time frame
       sensordat$site_id[time_ind]<-as.character(locationdat$site_id[i])
     }
