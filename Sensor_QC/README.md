@@ -19,16 +19,27 @@ Process
         -  So `sensor_data.csv` will be updated once a week and keep the same file name.  
         -  **Only do this step once a week since it takes time.**
 
-    2.  (After the data has been updated) Compile the report using `Sensor_QC_Report.Rmd` located in X:/Production\_code/sensor\_QC/, which will output an html report `Sensor_QC_Report.html`.
-        -  At the time this document was created, there was a bug compiling Rmarkdown files on the DEOHS computers using Windows.  You may have to open the `Command Prompt` and run the following code:    
-`H:`
-`cd \My Documents\R\win-library\3.4\rmarkdown\rmd\h`
-`copy default.html D0CS9J~9.html`
+    2.  (After the data has been updated) Compile the report using `Sensor_QC_Report.Rmd` located in X:/Production\_code/sensor\_QC/, which will output an html report `Sensor_QC_Report.html`.  See Rmarkdown note below if you experience an error compiling.
           
     3.  Rename the html output document (`Sensor_QC_Report.html`) by adding on the report date at the end (for example `Sensor_QC_Report_01_08_18.Rmd`)
         -   Use the date of the Monday the report was run (the day after the range of dates in the report)
         -   I hope to make this renaming step automatic eventually
-
+        
+        
+**Rmarkdown note:** At the time this document was created, there was a bug compiling Rmarkdown files on the DEOHS computers using Windows.  You may have to open the `Command Prompt` and run the following code: 
+```
+H:
+cd \My Documents\R\win-library\3.4\rmarkdown\rmd\h
+copy default.html D0CS9J~9.html
+```
+ Then make sure that the header of the R markdown file includes 
+ ```
+output:
+    html_document:
+        self_contained: no
+```
+ as can be seen in `Sensor_QC_Report.Rmd`.
+    
 Description of Files
 ====================
 
